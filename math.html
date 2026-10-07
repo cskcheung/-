@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小一數學速算挑戰 - iPad 特別版</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti 慶祝紙屑動畫庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* 全局字體：中文字體標楷體，數字/英文字體 Times New Roman */
+        body {
+            font-family: 'Times New Roman', 'BiauKai', 'DFKai-SB', 'KaiTi', serif;
+            background: linear-gradient(135deg, #a8edf0 0%, #fed6e3 50%, #d4fc79 100%);
+            min-height: 100vh;
+            touch-action: manipulation; /* 避免 iPad 雙擊縮放 */
+            user-select: none; /* 防止誤選文字 */
+        }
+
+        /* 3D 立體感按鈕效果 */
+        .btn-3d {
+            transition: all 0.1s ease;
+            box-shadow: 0 8px 0 rgba(0, 0, 0, 0.15), 0 15px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-3d:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 數字鍵盤專用 3D 按鈕 */
+        .key-btn {
+            transition: all 0.08s ease;
+            box-shadow: 0 6px 0 #93c5fd, 0 10px 15px rgba(0, 0, 0, 0.08);
+             touch-action: manipulation;
+        }
+        .key-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #93c5fd, 0 3px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 飄浮背景元素動畫 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+        .floating {
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        /* 卡片登場動畫 */
+        @keyframes popUp {
+            0% { opacity: 0; transform: scale(0.85) translateY(30px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop-up {
+            animation: popUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* 隱藏輔助類 */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+
+    <!-- iPad 飄浮背景裝飾圖案 -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div class="absolute top-10 left-10 text-6xl opacity-40 floating" style="animation-delay: 0s;">⭐</div>
+        <div class="absolute top-20 right-16 text-7xl opacity-40 floating" style="animation-delay: 1s;">🎨</div>
+        <div class="absolute bottom-12 left-16 text-7xl opacity-40 floating" style="animation-delay: 2s;">🚀</div>
+        <div class="absolute bottom-10 right-12 text-6xl opacity-40 floating" style="animation-delay: 1.5s;">🍎</div>
+    </div>
+
+    <!-- 遊戲主要內容卡片 (專為平板優化的寬度與圓角) -->
+    <div id="game-container" class="relative z-10 bg-white/95 backdrop-blur-md rounded-[2.5rem] shadow-2xl border-8 border-white p-6 sm:p-10 w-full max-w-2xl text-center transition-all duration-300 animate-pop-up">
+        
+        <!-- 1. 開始畫面 -->
+        <div id="start-screen" class="flex flex-col items-center justify-center space-y-6 py-4">
+            <div class="inline-block bg-pink-100 text-pink-600 px-6 py-2 rounded-full font-bold text-lg border-2 border-pink-300">
+                ✨ 專為小一學生設計
+            </div>
+            
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-600 tracking-wide drop-shadow-sm">
+                小一數學速算大挑戰
+            </h1>
+            
+            <p class="text-2xl text-purple-600 font-semibold">
+                循序漸進純加法篇 🧮
+            </p>
+
+            <!-- 卡通主圖案 -->
+            <div class="relative my-4">
+                <div class="text-8xl sm:text-9xl floating">🐱‍🏍</div>
+            </div>
+
+            <p class="text-2xl text-gray-700 font-bold">
+                準備好拿滿分了嗎？
+            </p>
+
+            <!-- 開始按鈕 (大型 Touch Target) -->
+            <button onclick="startGame()" class="btn-3d w-full max-w-xs bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white text-3xl font-extrabold py-5 px-8 rounded-3xl border-b-4 border-teal-700 mt-4 cursor-pointer">
+                開始遊戲！ 🎮
+            </button>
+        </div>
+
+        <!-- 2. 遊戲進行畫面 -->
+        <div id="game-screen" class="hidden flex flex-col items-center justify-center w-full">
+            
+            <!-- 頂部狀態列 (進度條 & 計時) -->
+            <div class="flex justify-between items-center w-full mb-6 gap-4">
+                <div class="bg-indigo-50 border-2 border-indigo-200 text-indigo-700 px-5 py-3 rounded-2xl font-bold text-xl sm:text-2xl flex items-center shadow-sm">
+                    📌 第 <span id="question-number" class="text-2xl sm:text-3xl mx-1 text-pink-500">1</span> / 10 題
+                </div>
+                <div class="bg-amber-50 border-2 border-amber-200 text-amber-700 px-5 py-3 rounded-2xl font-bold text-xl sm:text-2xl flex items-center shadow-sm">
+                    ⏱️ <span id="timer" class="text-2xl sm:text-3xl mx-1 text-amber-600">0</span> 秒
+                </div>
+            </div>
+
+            <!-- 題目顯眼大字體 display -->
+            <div class="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-3xl p-6 mb-6 w-full border-4 border-indigo-100 shadow-inner">
+                <div class="text-6xl sm:text-7xl font-bold tracking-wider flex items-center justify-center gap-2 sm:gap-4" id="equation-display">
+                    <span id="num1" class="text-blue-600 inline-block min-w-[1.2em]">?</span> 
+                    <span id="operator" class="text-purple-500">+</span> 
+                    <span id="num2" class="text-emerald-600 inline-block min-w-[1.2em]">?</span> 
+                    <span class="text-gray-400">=</span> 
+                    <!-- 答案框 -->
+                    <span id="answer-box" class="bg-white border-b-8 border-pink-400 rounded-2xl px-4 py-2 text-pink-600 min-w-[2.2em] h-[1.4em] flex items-center justify-center shadow-md">
+                        <span id="current-input" class="text-5xl sm:text-6xl"></span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 即時提示訊息 -->
+            <div id="feedback-message" class="text-2xl font-bold h-10 mb-4 flex items-center justify-center transition-all duration-300 opacity-0"></div>
+
+            <!-- iPad 專用放大版數字鍵盤 (3x4 Grid) -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-4 w-full max-w-md mx-auto" id="keypad">
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(1)">1</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(2)">2</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(3)">3</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(4)">4</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(5)">5</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(6)">6</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(7)">7</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(8)">8</button>
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(9)">9</button>
+
+                <!-- 清除按鈕 -->
+                <button class="key-btn text-xl sm:text-2xl font-bold bg-rose-100 text-rose-600 rounded-2xl py-4 sm:py-5 border-b-4 border-rose-300" onclick="clearInput()">清除 ⌫</button>
+                <!-- 0 號數字 -->
+                <button class="key-btn text-3xl sm:text-4xl font-extrabold bg-blue-50 text-blue-700 rounded-2xl py-4 sm:py-5 border-b-4 border-blue-300" onclick="inputNumber(0)">0</button>
+                <!-- 確定提交按鈕 -->
+                <button class="key-btn text-2xl sm:text-3xl font-extrabold bg-emerald-400 text-white rounded-2xl py-4 sm:py-5 border-b-4 border-emerald-600" onclick="submitAnswer()">確定 ✔</button>
+            </div>
+        </div>
+
+        <!-- 3. 結果結算畫面 -->
+        <div id="result-screen" class="hidden flex flex-col items-center justify-center space-y-6 py-4">
+            <h2 class="text-4xl sm:text-5xl font-extrabold text-purple-600">挑戰完成！</h2>
+            
+            <div class="text-8xl my-2 floating" id="result-emoji">🏆</div>
+            
+            <!-- 成績統計面板 -->
+            <div class="bg-amber-50/80 rounded-3xl p-6 w-full border-4 border-amber-200 shadow-sm space-y-4">
+                <div class="flex justify-between items-center text-2xl text-gray-700">
+                    <span class="font-bold">🎯 最終得分：</span>
+                    <span class="text-4xl font-black text-pink-500"><span id="final-score">0</span> / 10 分</span>
+                </div>
+                <hr class="border-amber-200">
+                <div class="flex justify-between items-center text-2xl text-gray-700">
+                    <span class="font-bold">⏱️ 總共花費：</span>
+                    <span class="text-3xl font-black text-blue-600"><span id="final-time">0</span> 秒</span>
+                </div>
+            </div>
+
+            <!-- 評語鼓勵 -->
+            <p id="encouragement-message" class="text-2xl font-bold text-center px-2 py-2"></p>
+
+            <button onclick="resetGame()" class="btn-3d w-full max-w-xs bg-gradient-to-r from-blue-400 to-indigo-500 hover:from-blue-500 hover:to-indigo-600 text-white text-2xl font-extrabold py-4 px-8 rounded-3xl border-b-4 border-indigo-700 cursor-pointer">
+                再來一次！ 🔄
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Web Audio 音效產生器 (無需任何外部音樂檔案) ---
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // 播放按鍵點擊聲
+        function playTapSound() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        // 播放答對提示聲 (雙和弦叮咚)
+        function playCorrectSound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc1.type = 'triangle';
+                osc2.type = 'triangle';
+
+                osc1.frequency.setValueAtTime(523.25, now); // C5
+                osc1.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                
+                osc2.frequency.setValueAtTime(659.25, now); // E5
+                osc2.frequency.setValueAtTime(783.99, now + 0.1); // G5
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.35);
+                osc2.stop(now + 0.35);
+            } catch(e) {}
+        }
+
+        // 播放答錯提示聲 (低音嗶嗶)
+        function playErrorSound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(180, now + 0.1);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } catch(e) {}
+        }
+
+        // --- 遊戲邏輯變數 ---
+        const TOTAL_QUESTIONS = 10;
+        let currentQuestionNum = 0;
+        let score = 0;
+        let currentNum1 = 0;
+        let currentNum2 = 0;
+        let currentAnswer = '';
+        
+        let startTime = 0;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+
+        // DOM 元素參照
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const resultScreen = document.getElementById('result-screen');
+        
+        const num1Display = document.getElementById('num1');
+        const num2Display = document.getElementById('num2');
+        const currentInputDisplay = document.getElementById('current-input');
+        const questionNumberDisplay = document.getElementById('question-number');
+        const timerDisplay = document.getElementById('timer');
+        const feedbackMessage = document.getElementById('feedback-message');
+        
+        const finalScoreDisplay = document.getElementById('final-score');
+        const finalTimeDisplay = document.getElementById('final-time');
+        const encouragementMessage = document.getElementById('encouragement-message');
+        const resultEmoji = document.getElementById('result-emoji');
+
+        // 開始遊戲
+        function startGame() {
+            getAudioContext(); // 初始化音效引擎
+            playTapSound();
+
+            currentQuestionNum = 1;
+            score = 0;
+            secondsElapsed = 0;
+            currentAnswer = '';
+            
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            
+            updateTimerDisplay();
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            generateQuestion();
+        }
+
+        // 計時器更新
+        function updateTimer() {
+            secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.textContent = secondsElapsed;
+        }
+
+        // 產生題目：難度循序漸進（純加法）
+        function generateQuestion() {
+            currentAnswer = '';
+            updateInputDisplay();
+            feedbackMessage.style.opacity = '0';
+            
+            questionNumberDisplay.textContent = currentQuestionNum;
+            
+            if (currentQuestionNum <= 3) {
+                // 難度一 (第 1-3 題)：和在 10 以內 (1~5 + 1~5)
+                currentNum1 = Math.floor(Math.random() * 5) + 1;
+                currentNum2 = Math.floor(Math.random() * 5) + 1;
+            } else if (currentQuestionNum <= 7) {
+                // 難度二 (第 4-7 題)：和在 9~15 (湊十準備)
+                currentNum1 = Math.floor(Math.random() * 5) + 5; 
+                currentNum2 = Math.floor(Math.random() * 6) + 4; 
+            } else {
+                // 難度三 (第 8-10 題)：和在 12~18 (進位加法)
+                currentNum1 = Math.floor(Math.random() * 4) + 6; 
+                currentNum2 = Math.floor(Math.random() * 4) + 6; 
+            }
+            
+            num1Display.textContent = currentNum1;
+            num2Display.textContent = currentNum2;
+        }
+
+        // 輸入數字處理
+        function inputNumber(num) {
+            playTapSound();
+            if (currentAnswer.length >= 2) return; // 答案最多2位數 (例如 9+9=18)
+            currentAnswer += num.toString();
+            updateInputDisplay();
+        }
+
+        // 清除輸入
+        function clearInput() {
+            playTapSound();
+            currentAnswer = '';
+            updateInputDisplay();
+        }
+
+        // 更新畫面上的輸入答案
+        function updateInputDisplay() {
+            currentInputDisplay.textContent = currentAnswer;
+        }
+
+        // 提交答案並驗證
+        function submitAnswer() {
+            if (currentAnswer === '') {
+                playErrorSound();
+                showFeedback('請先輸入答案喔！💡', 'text-amber-500');
+                return;
+            }
+
+            const userAnswer = parseInt(currentAnswer, 10);
+            const correctAnswer = currentNum1 + currentNum2;
+
+            if (userAnswer === correctAnswer) {
+                score++;
+                playCorrectSound();
+                showFeedback('答對了！太棒了！✨', 'text-emerald-500');
+            } else {
+                playErrorSound();
+                showFeedback(`哎呀！正確答案是 ${correctAnswer} 喔！`, 'text-rose-500');
+            }
+
+            // 1 秒後進入下一題或結算
+            setTimeout(() => {
+                if (currentQuestionNum < TOTAL_QUESTIONS) {
+                    currentQuestionNum++;
+                    generateQuestion();
+                } else {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 顯示回答結果提示
+        function showFeedback(text, colorClass) {
+            feedbackMessage.textContent = text;
+            feedbackMessage.className = `text-2xl font-bold h-10 mb-4 flex items-center justify-center transition-all duration-300 opacity-100 ${colorClass}`;
+        }
+
+        // 結束遊戲與結果渲染
+        function endGame() {
+            clearInterval(timerInterval);
+            
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            
+            finalScoreDisplay.textContent = score;
+            finalTimeDisplay.textContent = secondsElapsed;
+            
+            if (score === TOTAL_QUESTIONS) {
+                // 滿分發射彩帶動畫！
+                try {
+                    confetti({
+                        particleCount: 120,
+                        spread: 80,
+                        origin: { y: 0.6 }
+                    });
+                } catch(e) {}
+
+                encouragementMessage.textContent = "太厲害了！你是數學小天才！🎉";
+                encouragementMessage.className = "text-2xl font-extrabold text-pink-600 text-center";
+                resultEmoji.textContent = "👑";
+            } else if (score >= 7) {
+                encouragementMessage.textContent = "表現得非常好！繼續保持！👍";
+                encouragementMessage.className = "text-2xl font-extrabold text-emerald-600 text-center";
+                resultEmoji.textContent = "🌟";
+            } else if (score >= 4) {
+                encouragementMessage.textContent = "做得好！多練習幾次會更棒！💪";
+                encouragementMessage.className = "text-2xl font-extrabold text-blue-600 text-center";
+                resultEmoji.textContent = "😊";
+            } else {
+                encouragementMessage.textContent = "別灰心，再試一次一定會進步的！加油！❤️";
+                encouragementMessage.className = "text-2xl font-extrabold text-amber-600 text-center";
+                resultEmoji.textContent = "🌻";
+            }
+        }
+
+        // 重新開始
+        function resetGame() {
+            playTapSound();
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        // 實體鍵盤支援
+        document.addEventListener('keydown', (event) => {
+            if (gameScreen.classList.contains('hidden')) return;
+
+            const key = event.key;
+            if (key >= '0' && key <= '9') {
+                inputNumber(parseInt(key, 10));
+            } else if (key === 'Backspace') {
+                clearInput();
+            } else if (key === 'Enter') {
+                submitAnswer();
+            }
+        });
+    </script>
+</body>
+</html>
